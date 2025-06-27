@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - ConciergeAI</title>
+    <link rel="icon" href="{{ url_for('static', path='/favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <div class="container chat-container">
+        <div class="chat-header">
+            <div class="chat-header-left">
+                <div class="bot-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                </div>
+                <span>ConciergeAI</span>
+            </div>
+            <div class="chat-header-right">
+                <a href="/dashboard" class="btn btn-nav btn-secondary">Dashboard</a>
+                <a href="/" class="btn btn-nav btn-secondary">Home</a>
+            </div>
+        </div>
+
+        <div class="chat-config">
+            <div class="premium-input-group">
+                <div class="input-field-wrapper">
+                     <span class="premium-input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                    </span>
+                    <input type="text" id="api-key-input" class="url-input-premium" placeholder="Enter Your API Key...">
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">
+                Hello! I'm ConciergeAI. Please provide your API key above and ask me a question about your website.
+            </div>
+        </div>
+
+        <form class="chat-input-wrapper" id="chat-form">
+            <textarea id="query-input" placeholder="Ask a question..." required rows="1"></textarea>
+            <button type="submit" class="btn" title="Send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+            <button id="new-chat-btn" class="btn btn-nav btn-secondary">New Chat</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatForm = document.getElementById('chat-form');
+            const queryInput = document.getElementById('query-input');
+            const messagesContainer = document.getElementById('chat-messages');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const newChatButton = document.getElementById('new-chat-btn');
+
+            const SESSION_STORAGE_KEY = 'conciergeChatSessionId';
+            let currentSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+            if (newChatButton) {
+                newChatButton.addEventListener('click', () => {
+                    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+                    location.reload();
+                });
+            }
+
+            // Function to auto-resize textarea
+            queryInput.addEventListener('input', () => {
+                queryInput.style.height = 'auto';
+                queryInput.style.height = (queryInput.scrollHeight) + 'px';
+            });
+
+            queryInput.addEventListener('keydown', (e) => {
+                // Check if the pressed key is 'Enter' AND the 'Shift' key is NOT held down
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    // 1. Prevent the default action (which is to add a new line)
+                    e.preventDefault();
+
+                    // 2. Programmatically "click" the submit button
+                    chatForm.querySelector('button').click();
+                }
+            });
+
+            const addMessage = (text, sender) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                // Using innerText to prevent HTML injection
+                messageDiv.innerText = text;
+                messagesContainer.insertAdjacentElement('afterbegin', messageDiv);
+                messagesContainer.scrollTop = 0; // Scroll to the newest message
+            };
+
+            const showTypingIndicator = () => {
+                const typingDiv = document.createElement('div');
+                typingDiv.id = 'typing-indicator';
+                typingDiv.className = 'message bot typing';
+                typingDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+                messagesContainer.insertAdjacentElement('afterbegin', typingDiv);
+                messagesContainer.scrollTop = 0;
+            };
+
+            const removeTypingIndicator = () => {
+                const typingDiv = document.getElementById('typing-indicator');
+                if (typingDiv) {
+                    typingDiv.remove();
+                }
+            };
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const query = queryInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+
+                if (!query || !apiKey) {
+                    alert('Please provide an API Key and a question.');
+                    return;
+                }
+
+                addMessage(query, 'user');
+                queryInput.value = '';
+                queryInput.style.height = 'auto'; // Reset textarea height
+                const sendButton = chatForm.querySelector('button');
+                sendButton.disabled = true;
+
+                showTypingIndicator();
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': apiKey
+                        },
+                        body: JSON.stringify({
+                            query: query,
+                            session_id: currentSessionId
+                        })
+                    });
+
+                    removeTypingIndicator(); // Remove indicator once response is received
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.detail || 'An error occurred.');
+                    }
+
+                    const result = await response.json();
+                    addMessage(result.answer, 'bot');
+                    currentSessionId = result.session_id;
+
+                    sessionStorage.setItem(SESSION_STORAGE_KEY, currentSessionId);
+
+                } catch (error) {
+                    removeTypingIndicator(); // Also remove indicator on error
+                    addMessage(`Error: ${error.message}`, 'bot');
+                } finally {
+                    sendButton.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

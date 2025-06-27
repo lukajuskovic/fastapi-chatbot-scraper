@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ConciergeAI</title>
+    <link rel="icon" href="{{ url_for('static', path='/favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <nav class="dashboard-nav">
+            <div class="logo">ConciergeAI</div>
+            <div>
+                <span class="welcome-text">Welcome, {{ user.username }}</span>
+                <a href="/chat" id="chatbot-link-btn" class="btn btn-nav">Go to Chatbot</a>
+                <button id="logout-btn" class="btn btn-nav">Logout</button>
+            </div>
+        </nav>
+
+        <main class="dashboard-main">
+            <h1>Dashboard</h1>
+
+            <!-- API Keys Management Card -->
+            <div class="card">
+                <h2>API Keys</h2>
+                <p>Generate a new key for each website you want to add to the service.</p>
+                <div class="card-actions">
+                    <button id="generate-key-btn" class="btn">Add Website & Generate Key</button>
+                </div>
+
+                <table class="api-keys-table">
+                    <thead>
+                        <tr>
+                            <th>Prefix</th>
+                            <th>Website URL</th>
+                            <th>Scraping Status</th>
+                            <th>Created On</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="api-keys-tbody">
+                        <!-- API keys will be dynamically inserted here by JavaScript -->
+                        <tr>
+                            <td colspan="6" style="text-align:center;">Loading keys...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for entering the website URL -->
+    <div class="modal-overlay" id="url-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Website</h2>
+                <button id="url-modal-close-btn" class="premium-modal-close-btn" title="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <form id="url-form">
+                <div class="premium-input-group">
+                    <label for="website-url-input">Website URL</label>
+                    <div class="input-field-wrapper">
+                        <input type="url" id="website-url-input" class="url-input-premium" name="website_url" required placeholder="https://example.com">
+                        <span class="premium-input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Submit & Generate Key</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for displaying the newly generated key -->
+    <div class="modal-overlay" id="new-key-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>API Key Generated</h2>
+                <button id="modal-close-btn" class="premium-modal-close-btn" title="Close"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <p style="color: #e74c3c; font-weight: 500;">Please copy your new API key. For your security, this is the only time you will see it.</p>
+            <div id="new-key-value">
+                <code id="new-key-code"></code>
+                <button id="copy-key-btn" title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zM-1 7a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1h-15A.5.5 0 0 1-1 7z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Get references to ALL elements ---
+            const apiKeysTbody = document.getElementById('api-keys-tbody');
+            const generateBtn = document.getElementById('generate-key-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            const urlModal = document.getElementById('url-modal');
+            const urlForm = document.getElementById('url-form');
+            const urlInput = document.getElementById('website-url-input');
+            const urlModalCloseBtn = document.getElementById('url-modal-close-btn');
+
+            const newKeyModal = document.getElementById('new-key-modal');
+            const newKeyCode = document.getElementById('new-key-code');
+            const newKeyModalCloseBtn = document.getElementById('modal-close-btn');
+            const copyBtn = document.getElementById('copy-key-btn');
+
+            // --- Main Functions ---
+
+            const fetchApiKeys = async () => {
+                try {
+                    const response = await fetch('/api-keys', { credentials: 'include' });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.detail || 'Failed to fetch keys.');
+                    }
+                    const keys = await response.json();
+
+                    apiKeysTbody.innerHTML = ''; // Clear loading message
+                    if (keys.length === 0) {
+                        apiKeysTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No API keys found. Add a website to get started.</td></tr>';
+                    } else {
+                        keys.forEach(key => {
+                            const status = key.website.scraping_status;
+                            const statusClass = status.toLowerCase(); // PENDING -> pending
+                            const row = `
+                                <tr id="website-row-${key.website.id}">
+                                    <td><code>${key.prefix}...</code></td>
+                                    <td><a href="${key.website.url}" target="_blank" title="Visit ${key.website.url}">${key.website.url}</a></td>
+                                    <td class="status-cell">
+                                        <span class="status-badge ${statusClass}">${status}</span>
+                                    </td>
+                                    <td>${new Date(key.created_at).toLocaleDateString()}</td>
+                                    <td><span class="status-badge active">${key.is_active ? 'Active' : 'Inactive'}</span></td>
+                                    <td>
+                                        <button class="delete-key-btn" data-key-id="${key.id}" title="Delete Key">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            apiKeysTbody.insertAdjacentHTML('beforeend', row);
+                        });
+                    }
+                } catch (error) {
+                    apiKeysTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">${error.message}</td></tr>`;
+                }
+            };
+            const handleDeleteKey = async (keyId) => {
+                if (!confirm('Are you sure you want to delete this API key? This cannot be undone.')) return;
+
+                try {
+                    const response = await fetch(`/api-keys/${keyId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        fetchApiKeys(); // Refresh the list
+                    } else {
+                        const result = await response.json();
+                        alert(`Failed to delete key: ${result.detail}`);
+                    }
+                } catch (error) {
+                    alert('A network error occurred.');
+                }
+            };
+
+            const copyToClipboard = () => {
+                navigator.clipboard.writeText(newKeyCode.textContent).then(() => {
+                    const originalIcon = copyBtn.innerHTML;
+                    copyBtn.innerHTML = 'Copied!';
+                    setTimeout(() => { copyBtn.innerHTML = originalIcon; }, 2000);
+                });
+            };
+
+            // --- Event Listeners ---
+
+            // "Generate" button opens the URL modal
+            generateBtn.addEventListener('click', () => {
+                urlForm.reset();
+                urlModal.style.display = 'flex';
+            });
+
+            urlForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitButton = urlForm.querySelector('.btn');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Processing...';
+
+                try {
+                    const response = await fetch('/api-keys', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urlInput.value }),
+                        credentials: 'include' // FIX #2: Include credentials
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        alert(`Error: ${result.detail || 'Could not process request.'}`);
+                        return;
+                    }
+
+                    urlModal.style.display = 'none';
+                    newKeyCode.textContent = result.key;
+                    newKeyModal.style.display = 'flex';
+                    fetchApiKeys(); // Refresh the API key list
+
+                } catch (error) {
+                    alert('A network error occurred.');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit & Generate Key';
+                }
+            });
+
+            // Listeners for closing modals, copy, logout, and delete delegation
+            urlModalCloseBtn.addEventListener('click', () => urlModal.style.display = 'none');
+            newKeyModalCloseBtn.addEventListener('click', () => newKeyModal.style.display = 'none');
+
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.style.display = 'none';
+                });
+            });
+
+            copyBtn.addEventListener('click', copyToClipboard);
+
+            logoutBtn.addEventListener('click', () => {
+                fetch('/logout', { method: 'POST', credentials: 'include' }).then(() => {
+                    window.location.href = '/login';
+                });
+            });
+
+            apiKeysTbody.addEventListener('click', (e) => {
+                const deleteButton = e.target.closest('.delete-key-btn');
+                if (deleteButton) handleDeleteKey(deleteButton.dataset.keyId);
+            });
+
+            // --- Initial Load ---
+            fetchApiKeys();
+        });
+    </script>
+</body>
+</html>

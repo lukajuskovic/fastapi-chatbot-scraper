@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConciergeAI - Intelligent Chatbots for Your Website</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', path='/favicon.png') }}">
+</head>
+<body class="homepage-body">
+
+    <div class="hero-container">
+        <h1 class="hero-headline">Create an AI Assistant for Your Website</h1>
+        <p class="hero-subheadline">
+            Automatically scrape your website's content and deploy an intelligent chatbot that knows your business inside and out.
+        </p>
+
+        <div class="hero-actions">
+            <!-- Sign Up Button/Card -->
+            <a href="/signup" class="action-card">
+                <div class="action-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                </div>
+                <span class="action-text">Sign Up</span>
+            </a>
+
+            <!-- Login Button/Card -->
+            <a href="/login" class="action-card">
+                <div class="action-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                </div>
+                <span class="action-text">Login</span>
+            </a>
+
+            <!-- Chatbot Button/Card -->
+            <a href="/chat" class="action-card">
+                <div class="action-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <span class="action-text">Chatbot</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,893 @@
+/* Import a modern font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+/* --- Global Styles & Resets --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: #f0f2f5; /* A light grey background */
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* --- The Main Container Card --- */
+.container {
+    background: white;
+    padding: 2.5rem 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    border-top: 5px solid #4a90e2; /* A nice accent color */
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Logo & Typography --- */
+.logo {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #4a90e2;
+    margin-bottom: 0.5rem;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 0.95rem;
+    color: #7f8c8d;
+    margin-bottom: 2rem;
+}
+
+/* --- Form Elements --- */
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+/* Icons inside the input fields */
+.input-wrapper .input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #bdc3c7;
+    transition: color 0.3s;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 0.9rem 0.9rem 0.9rem 2.8rem; /* Left padding to make space for the icon */
+    border: 1px solid #dfe6e9;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #4a90e2;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+input:focus + .input-icon {
+    color: #4a90e2;
+}
+
+/* --- Password Visibility Toggle --- */
+.password-toggle-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #95a5a6;
+}
+
+/* --- Submit Button --- */
+.btn {
+    width: 100%;
+    padding: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-image: linear-gradient(to right, #4a90e2, #2968ac);
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.2);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* --- Message Box --- */
+.message-box {
+    margin-top: 1.5rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    min-height: 1em; /* Prevents layout shift */
+}
+
+.message-box.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.message-success {
+    color: #0b6623;
+    background-color: #e6f6e9;
+    border: 1px solid #cce8d2;
+}
+
+.message-error {
+    color: #d8000c;
+    background-color: #ffedee;
+    border: 1px solid #ffd6d9;
+}
+
+/* --- Link to Login Page --- */
+.form-link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; /* Allows links to stack on very small screens */
+    gap: 0.75rem; /* Adds space between the links and the separator */
+}
+
+.form-link a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.form-link a:hover {
+    text-decoration: underline;
+}
+
+/* --- Dashboard Layout --- */
+.dashboard-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1000px;
+    height: 100vh;
+}
+
+.dashboard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    width: 100%;
+}
+
+.dashboard-nav .logo {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#logout-btn {
+    background-image: none;
+    background-color: #e74c3c;
+}
+#logout-btn:hover {
+    background-color: #c0392b;
+}
+.dashboard-main {
+    flex-grow: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* --- Card Styling --- */
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    margin-bottom: 2rem;
+}
+
+.card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.card p {
+    color: #7f8c8d;
+    margin-bottom: 1.5rem;
+}
+
+.card-actions {
+    text-align: right;
+}
+
+/* --- API Keys Table --- */
+.api-keys-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+}
+
+.api-keys-table th, .api-keys-table td {
+    padding: 0.9rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #dfe6e9;
+}
+
+.api-keys-table th {
+    font-weight: 500;
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.api-keys-table tr:last-child td {
+    border-bottom: none;
+}
+
+.status-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    color: #27ae60;
+    background-color: #e9f7ef;
+}
+
+.delete-key-btn {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+.delete-key-btn:hover {
+    color: #c0392b;
+}
+
+/* --- New Key Modal --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 550px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+#new-key-value {
+    background: #f8f9fa;
+    border: 1px solid #dfe6e9;
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    word-break: break-all;
+    margin: 1rem 0;
+    position: relative;
+}
+
+#copy-key-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #fff;
+    border: 1px solid #dfe6e9;
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* --- Premium SaaS Input Field & Close Button --- */
+
+/* The wrapper for the label and input field */
+.premium-input-group {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+/* The label above the input */
+.premium-input-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a5568; /* A softer, professional dark grey */
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+/* The icon inside the input field */
+.premium-input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0; /* Make the span stretch to the full height of the parent */
+    margin: auto 0; /* A simpler way to vertically center, but flex is more robust */
+
+    /* The robust Flexbox solution */
+    display: flex;
+    align-items: center; /* This is the key: vertically centers the SVG inside the span */
+
+    color: #a0aec0;
+    transition: color 0.2s ease-in-out;
+}
+
+/* The input field itself */
+.url-input-premium {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 3.2rem; /* Make space for the icon */
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    color: #2d3748;
+    background-color: #f7fafc; /* A very light grey background */
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Subtle inner shadow */
+    transition: all 0.2s ease-in-out;
+}
+
+.url-input-premium::placeholder {
+    color: #a0aec0;
+}
+
+/* The polished focus state */
+.url-input-premium:focus {
+    outline: none;
+    border-color: #4a90e2;
+    background-color: #fff;
+    /* A beautiful blue glow effect */
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Change icon color when the input is focused */
+.url-input-premium:focus ~ .premium-input-icon {
+    color: #4a90e2;
+}
+
+
+/* --- The Prettier Close Button --- */
+.premium-modal-close-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: #95a5a6;
+    /* A smooth transition for hover effects */
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.premium-modal-close-btn:hover {
+    background-color: #edf2f7; /* Light grey background on hover */
+    transform: scale(1.1); /* Slightly enlarge the button */
+}
+
+.premium-modal-close-btn:focus-visible {
+    outline: 2px solid #4a90e2;
+}
+
+.input-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* --- Modern Homepage Styles --- */
+
+/* A cool background gradient */
+.homepage-body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 1rem;
+    overflow: hidden; /* Prevents scrollbars from the animation */
+}
+
+/* Main container for the hero section */
+.hero-container {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+    animation: fadeInZoom 1s ease-out forwards;
+}
+
+@keyframes fadeInZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* The main headline with gradient text */
+.hero-headline {
+    font-size: 4rem; /* Larger font size */
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+    color: #1a2a6c;
+
+    /* Gradient Text Effect */
+    background: linear-gradient(to right, #2a62a6, #4a90e2, #63a4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* The sub-headline */
+.hero-subheadline {
+    font-size: 1.25rem;
+    color: #4a5568; /* A professional, soft dark grey */
+    margin-bottom: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    animation: fadeIn 1s ease-out 0.5s forwards;
+    opacity: 0; /* Start hidden for animation */
+}
+
+/* The container for the action buttons */
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem; /* Space between buttons */
+    flex-wrap: wrap; /* Allows buttons to stack on smaller screens */
+    animation: fadeIn 1s ease-out 1s forwards;
+    opacity: 0; /* Start hidden for animation */
+}
+
+/* Styling for the button cards */
+.action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #2d3748;
+
+    width: 200px;
+    height: 150px;
+    border-radius: 16px;
+
+    /* Glassmorphism Effect */
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-8px); /* Lift the card on hover */
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+}
+
+/* Icon styling */
+.action-icon {
+    margin-bottom: 1rem;
+    color: #4a90e2; /* Icon color matches the theme */
+}
+
+/* Text styling inside the card */
+.action-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .hero-headline {
+        font-size: 3rem;
+    }
+    .hero-subheadline {
+        font-size: 1rem;
+    }
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    .action-card {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+/* --- Modern Chat Interface Styles --- */
+
+.chat-container {
+    padding: 0; /* Remove parent container padding */
+    max-width: 750px; /* Wider for a better chat layout */
+    height: 90vh; /* Taller */
+    display: flex;
+    flex-direction: column;
+    border-top: none; /* We'll use a header border instead */
+    animation: none; /* Disable the global container animation */
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    background-color: #fff;
+    border-radius: 12px 12px 0 0; /* Match container rounding */
+}
+
+.chat-header .bot-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4a90e2, #2968ac);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.5rem;
+}
+
+.chat-config {
+    padding: 1rem 1.5rem;
+    background: #f7fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse; /* Keep this clever trick */
+    background-color: #f8f9fa;
+}
+
+/* Base style for all messages */
+.message {
+    max-width: 75%;
+    padding: 0.8rem 1.2rem;
+    border-radius: 20px;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* User's message bubble */
+.message.user {
+    background-color: #4a90e2;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px; /* The "tail" effect */
+}
+
+/* Bot's message bubble */
+.message.bot {
+    background-color: #e9ecef;
+    color: #343a40;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px; /* The "tail" effect */
+}
+
+/* The typing indicator for the bot */
+.message.bot.typing {
+    background-color: #e9ecef;
+    color: #868e96;
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+}
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #868e96;
+    margin: 0 2px;
+    animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+}
+
+/* The modern chat input form */
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.chat-input-wrapper textarea {
+    flex-grow: 1;
+    border: none;
+    padding: 0.8rem;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    resize: none; /* Prevent manual resizing */
+    max-height: 100px; /* Limit height */
+    background: transparent;
+}
+
+.chat-input-wrapper textarea:focus {
+    outline: none;
+}
+
+.chat-input-wrapper button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    margin-left: 0.75rem;
+    background-color: #4a90e2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.chat-input-wrapper button:hover {
+    background-color: #2968ac;
+    transform: scale(1.05);
+}
+
+.chat-input-wrapper button:disabled {
+    background-color: #ced4da;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Dashboard Navigation Bar Enhancements --- */
+
+/* Use Flexbox gap for easy spacing of nav items */
+.dashboard-nav > div {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Adds space between "Welcome", chatbot button, and logout button */
+}
+
+.btn-nav {
+    width: 150px;
+    height: 42px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+/* Style for the new "Go to Chatbot" link */
+#chatbot-link-btn {
+    text-decoration: none; /* Remove underline from the <a> tag */
+    /* The blue gradient is already applied by the base .btn class */
+}
+
+/* Make the header a flex container to position items on opposite ends */
+.chat-header {
+    justify-content: space-between;
+}
+
+/* A container for the action buttons in the header */
+.chat-header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Space between the buttons */
+}
+
+/* Create a secondary button style for less important actions like "Home" */
+.btn.btn-secondary {
+    text-decoration: none;
+    background-image: none;
+    background-color: #e9ecef;
+    color: #495057;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.btn.btn-secondary:hover {
+    background-color: #dfe6e9;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* --- Chat Header Alignment Fix --- */
+
+/* Target the container for the logo and title on the left */
+.chat-header-left {
+    display: flex;         /* This is the key: makes children align horizontally */
+    align-items: center;   /* This ensures perfect vertical alignment */
+    gap: 0.75rem;          /* Adds a nice space between the icon and the text */
+}
+
+/* We can also remove the old margin from the avatar now that we use gap */
+.chat-header .bot-avatar {
+    margin-right: 0;
+}
+.dashboard-nav > div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* =================================================================== */
+/* --- Responsive Styles for Tablets & Below (768px and smaller) --- */
+/* =================================================================== */
+
+@media (max-width: 768px) {
+
+    /* --- 1. General Layout Adjustments --- */
+    body {
+        padding: 0; /* Remove body padding on small screens */
+    }
+    .dashboard-wrapper {
+        height: auto;
+        min-height: 100vh;
+        border-radius: 0;
+    }
+    .dashboard-main {
+        padding: 1.5rem 1rem; /* Reduce main content padding */
+    }
+    .card {
+        padding: 1.5rem; /* Reduce card padding */
+    }
+
+    /* --- 2. Adjust Dashboard Navigation --- */
+    .dashboard-nav {
+        padding: 1rem 1.5rem;
+    }
+    /* Hide the "Welcome, ..." text on small screens to save space */
+    .welcome-text {
+        display: none;
+    }
+
+    /* --- 3. The Responsive API Keys Table (Stacking) --- */
+    .api-keys-table {
+        border: none; /* Remove table border for card-like appearance */
+    }
+    .api-keys-table thead {
+        /* Hide the original table headers; we'll use data-labels instead */
+        display: none;
+    }
+    .api-keys-table tr {
+        display: block; /* Make each row behave like a block-level card */
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 1rem;
+    }
+    .api-keys-table tr:last-child {
+        margin-bottom: 0;
+    }
+    .api-keys-table td {
+        display: flex; /* Use flexbox for easy label/value alignment */
+        justify-content: space-between; /* Push label to the left and value to the right */
+        align-items: center;
+        padding: 0.75rem 0; /* Adjust vertical padding, remove horizontal */
+        border-bottom: 1px dashed #e2e8f0; /* Use a dashed line for separation */
+        text-align: right; /* Align the cell content (value) to the right */
+    }
+    .api-keys-table td:last-child {
+        border-bottom: none;
+    }
+
+    /* This is the magic part: create pseudo-elements for the labels */
+    .api-keys-table td::before {
+        content: attr(data-label); /* Get the label text from the data-label attribute */
+        font-weight: 500;
+        color: #2d3748;
+        text-align: left; /* Align the label itself to the left */
+        margin-right: 1rem;
+    }
+
+    /* --- 4. Responsive Modals --- */
+    .modal-content {
+        padding: 1.5rem;
+    }
+}
+
+.status-badge.scraping { background-color: #3498db; color: white; }
+.status-badge.pending { background-color: #f1c40f; color: #333; }
+.status-badge.completed { background-color: #008b8b; color: white; }
+
+
+.api-keys-table .table-placeholder td {
+    text-align: center;
+    color: #7f8c8d; /* A muted color for placeholder text */
+    padding: 2rem 1rem; /* Add some extra vertical padding */
+}
