@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from .website import WebsiteInfo
 
+
 class APIKeyInfo(BaseModel):
     id: uuid.UUID
     prefix: str
@@ -15,3 +16,7 @@ class APIKeyInfo(BaseModel):
 class APIKeyResponse(BaseModel):
     key: str
     message: str
+
+class APIKeyCreate(BaseModel):
+    user_id: uuid.UUID
+    website_id: int

@@ -198,7 +198,7 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ url: urlInput.value }),
-                        credentials: 'include' // FIX #2: Include credentials
+                        credentials: 'include' // Include credentials
                     });
                     const result = await response.json();
 

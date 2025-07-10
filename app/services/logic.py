@@ -1,19 +1,25 @@
 import io
+from fastapi import HTTPException
 
 from PIL import Image
 from fastapi import requests
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 import uuid
 
-# Import local modules and classes
-from app.models.chatbot import Website, ScrapedContent, Chat_session, Message, MessageSender
+from app.models.scrapedcontent import ScrapedContent
+from app.models.chat_session import Chat_session
+from app.models.message import Message,MessageSender
 from .scraping import get_embedding
 
 # Import and configure the Google Generative AI client
 import google.generativeai as genai
 from app.core.config import get_settings
-from ..crud import crud_chatbot
+from app.crud.crud_chat_session import crud_chat_session
+from ..crud.crud_message import crud_message
+from ..crud.crud_scrapedcontent import crud_scraped_content
+from ..schemas.chat_session import ChatSessionCreate
+from ..schemas.chatbot import ChatRequest, ChatResponse
+from ..schemas.message import MessageCreate
 
 # Load application settings and configure the Gemini API key
 settings = get_settings()
@@ -25,14 +31,12 @@ llm_model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
 def find_or_create_session(db: Session, website_id: int, session_id: str | None) -> Chat_session:
     if session_id:
-        session = crud_chatbot.get_session(db, session_id=session_id)
+        session = crud_chat_session.get(db, id=session_id)
         if session:
             return session
 
-    new_session = crud_chatbot.create_session(db, website_id=website_id)
-    db.commit()
-    db.refresh(new_session)
-    return new_session
+    session_data_in = ChatSessionCreate(website_id=website_id)
+    return crud_chat_session.create(db, obj_in=session_data_in)
 
 
 def get_chat_history(db: Session, session_id: uuid.UUID) -> str:
@@ -41,8 +45,7 @@ def get_chat_history(db: Session, session_id: uuid.UUID) -> str:
     into a string for use in the prompt.
     """
     # Query the database for messages in the current session, ordered by time
-    messages = db.query(Message).filter(Message.chat_session_id == session_id).order_by(
-        Message.time_created.desc()).all()
+    messages = crud_message.get_messages_by_session(db,session_id = session_id)
 
     # Reverse the list to get chronological order and format into a "Sender: Text" string
     history = "\n".join([f"{msg.sender.value}: {msg.text}" for msg in reversed(messages)])
@@ -92,11 +95,7 @@ def find_relevant_context(db: Session, website_id: int, query: str, history: str
         return ""
 
     # 3. Perform a vector similarity search (L2 distance) against the scraped content
-    results = db.query(ScrapedContent).filter(
-        ScrapedContent.website_id == website_id
-    ).order_by(
-        ScrapedContent.embedding.l2_distance(query_embedding)
-    ).limit(top_k).all()
+    results= crud_scraped_content.get_relevant_scraped_content(db,website_id = website_id,embedding = query_embedding,top_k = top_k)
 
     structured_context = []
     for item in results:
@@ -182,12 +181,34 @@ def generate_response(website_url: str, history: str, context: str, query: str) 
         return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again later."
 
 
-def save_message(db: Session, session_id: uuid.UUID, sender: MessageSender, text: str):
-    """Saves a single chat message (from either user or bot) to the database."""
-    message = Message(
-        chat_session_id=session_id,
-        sender=sender,
-        text=text
-    )
-    db.add(message)
-    db.commit()
+def chatting(chat_request: ChatRequest,
+        db: Session,
+        auth_data: tuple):
+    """Main endpoint for chatbot functionality."""
+    current_user, website = auth_data
+
+    if not website:
+        raise HTTPException(status_code=404, detail="Website not found or you do not have permission.")
+
+    # Find or create a chat session
+    session = find_or_create_session(db, website.id, chat_request.session_id)
+
+    # Save the user's incoming message to the database
+    msg = MessageCreate(chat_session_id=session.id ,sender = MessageSender.USER ,text=chat_request.query)
+    crud_message.create(db, obj_in=msg)
+
+    # Get conversation history for the prompt
+    history = get_chat_history(db, session.id)
+
+    # Find relevant context from scraped data using vector search
+    context = find_relevant_context(db, website.id, chat_request.query, history)
+
+    # Generate a response from the LLM
+    answer = generate_response(website.url, history, context, chat_request.query)
+
+    # Save the bot's response to the database
+    msg_bot = MessageCreate(chat_session_id=session.id ,sender = MessageSender.BOT ,text=answer)
+    crud_message.create(db, obj_in=msg_bot)
+
+    # Return the response to the user
+    return ChatResponse(answer=answer, session_id=str(session.id))

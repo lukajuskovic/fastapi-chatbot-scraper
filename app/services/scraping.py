@@ -11,9 +11,12 @@ import docx  # python-docx
 import io
 import requests
 
+from app.crud.crud_scrapedcontent import crud_scraped_content
+from app.crud.crud_website import crud_website
 from app.db.session import SessionLocal
-from app.models.chatbot import ScrapedContent, Website, ScrapingStatus
-
+from app.models.website import ScrapingStatus
+from app.schemas.scrapedcontent import ScrapedContentCreate
+from app.schemas.website import WebsiteUpdate
 
 CSV_FILENAME = "scraped_data_log.csv"
 CSV_HEADERS = ['website_id', 'source_url', 'text_content', 'embedding_preview']
@@ -59,25 +62,18 @@ def add_chunk_to_db_and_csv(
     for text_chunk in chunks_to_add:
         embedding = get_embedding(text_chunk)
         if embedding:
-            new_content = ScrapedContent(
-                website_id=website_id,
-                source_url=source_url,
-                text_content=text_chunk,
-                embedding=embedding
-            )
-            db.add(new_content)
+            crud_scraped_content.create(db,obj_in= ScrapedContentCreate(website_id = website_id,source_url = source_url, text_content = text_chunk, embedding=embedding))
 
     # Batch write to CSV
-    file_exists = os.path.exists(CSV_FILENAME)
-    with open(CSV_FILENAME, 'a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        if not file_exists:
-            writer.writerow(CSV_HEADERS)
+    #file_exists = os.path.exists(CSV_FILENAME)
+    #with open(CSV_FILENAME, 'a', newline='', encoding='utf-8') as csvfile:
+    #    writer = csv.writer(csvfile)
+    #    if not file_exists:
+    #        writer.writerow(CSV_HEADERS)
 
-        for text_chunk in chunks_to_add:
-            # We don't need to store the full massive embedding in the CSV
-            embedding_preview = "omitted"
-            writer.writerow([website_id, source_url, text_chunk, embedding_preview])
+    #    for text_chunk in chunks_to_add:
+    #        embedding_preview = "omitted"
+    #        writer.writerow([website_id, source_url, text_chunk, embedding_preview])
 
 def process_page_content(page_html: str, source_url: str) -> list[str]:
     """
@@ -162,14 +158,12 @@ def scrape_site(url: str, website_id: int):
     #######################################
     start_url = url
     base_domain = urlparse(start_url).netloc
-
-    db = SessionLocal()
-    website = db.query(Website).filter(Website.id == website_id).first()
+    db= SessionLocal()
+    website = crud_website.get(db, id=website_id)
     if not website:
         return
     try:
-        website.scraping_status = ScrapingStatus.SCRAPING
-        db.commit()
+        crud_website.update(db, db_obj=website,obj_in=WebsiteUpdate(scraping_status=ScrapingStatus.SCRAPING))
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -248,7 +242,6 @@ def scrape_site(url: str, website_id: int):
                     print(f"  > Generated {len(chunks)} semantic chunks.")
                     if chunks:
                         add_chunk_to_db_and_csv(db, chunks, website_id, current_url)
-                        db.commit()
 
                     # Add new links to the queue
                     if new_links:
@@ -266,8 +259,8 @@ def scrape_site(url: str, website_id: int):
             print(f"Total pages visited: {len(visited_urls)}")
             browser.close()
     finally:
-        website.scraping_status = ScrapingStatus.COMPLETED
-        db.commit()
+        website = crud_website.get(db, id=website_id)
+        crud_website.update(db,db_obj=website,obj_in=WebsiteUpdate(scraping_status=ScrapingStatus.COMPLETED))
         db.close()
 
 

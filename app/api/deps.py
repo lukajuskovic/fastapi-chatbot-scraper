@@ -2,11 +2,12 @@ import jwt
 from jwt import PyJWTError
 from sqlalchemy.orm import Session
 
-from app.models.chatbot import Website
+from app.models.website import Website
 from app.db.session import SessionLocal
 from fastapi import Security, HTTPException, status, Depends, Request
 from fastapi.security.api_key import APIKeyHeader
-from app.models.user import APIKey, User # Import models
+from app.models.user import User
+from app.models.apikey import APIKey
 from app.core.config import get_settings
 from app.core.security import verify_key
 

@@ -5,9 +5,12 @@ from sqlalchemy import pool
 
 from alembic import context
 from decouple import config as envconf
-from models import User, APIKey
-from models import Message, Chat_session, Website, ScrapedContent
-from database import Base
+from app.models.user import User
+from app.models.apikey import APIKey
+from app.models.message import Message, MessageSender
+from app.models.scrapedcontent import ScrapedContent
+from app.models.website import Website, ScrapingStatus
+from app.db.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
