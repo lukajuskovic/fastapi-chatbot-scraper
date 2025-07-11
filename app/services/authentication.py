@@ -2,16 +2,16 @@ from app.core.security import generate_jwt, verify_password
 from app.crud.crud_user import crud_user
 from app.schemas.user import UserLogin
 from fastapi import HTTPException, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 
-def logging_in(response: Response,
+async def logging_in(response: Response,
         user_data: UserLogin,
-        db: Session):
+        db: AsyncSession):
     """Handles user login and sets an access token cookie."""
     # Find the user by username and verify their password
-    user = crud_user.get_user_by_username(db, user_data.username)
+    user = await crud_user.get_user_by_username(db, username=user_data.username)
     if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

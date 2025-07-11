@@ -1,32 +1,35 @@
 import jwt
 from jwt import PyJWTError
-from sqlalchemy.orm import Session
 
+from app.crud.crud_apikey import crud_api_key
+from app.crud.crud_user import crud_user
 from app.models.website import Website
-from app.db.session import SessionLocal
 from fastapi import Security, HTTPException, status, Depends, Request
 from fastapi.security.api_key import APIKeyHeader
 from app.models.user import User
-from app.models.apikey import APIKey
 from app.core.config import get_settings
 from app.core.security import verify_key
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import AsyncSessionLocal
 
 settings = get_settings()
 
 api_key_header_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-def get_db():
-    db= SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncSession:
+    """
+    Dependency that provides an AsyncSession to the endpoint.
+    """
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
-def get_user_from_api_key(
+async def get_user_from_api_key(
         api_key: str = Security(api_key_header_scheme),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     Dependency that authenticates a user based on a provided API key.
@@ -39,7 +42,7 @@ def get_user_from_api_key(
 
     # We use the prefix for a fast initial lookup
     prefix = api_key[:8]
-    potential_key = db.query(APIKey).filter(APIKey.prefix == prefix).first()
+    potential_key = await crud_api_key.find_by_prefix(db, prefix=prefix)
 
     if not potential_key or not potential_key.is_active:
         raise HTTPException(
@@ -70,7 +73,7 @@ class CookieAuthenticator:
     async def __call__(
             self,
             request: Request,
-            db: Session = Depends(get_db)
+            db: AsyncSession = Depends(get_db)
     ) -> User:
 
         token = request.cookies.get(self.cookie_name)
@@ -92,7 +95,7 @@ class CookieAuthenticator:
         except PyJWTError as e:
             raise self.credentials_exception
 
-        user = db.query(User).filter(User.username == username).first()
+        user = await crud_user.get_user_by_username(db,username=username)
 
         if user is None:
             raise self.credentials_exception
@@ -104,9 +107,9 @@ class CookieAuthenticator:
 get_current_user = CookieAuthenticator()
 
 
-def get_chatauth_from_api_key(
+async def get_chatauth_from_api_key(
         api_key: str = Security(api_key_header_scheme),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ) -> tuple[User, Website]:
     """
     Dependency that authenticates a user AND identifies the associated website.
@@ -115,7 +118,7 @@ def get_chatauth_from_api_key(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key is missing")
 
     prefix = api_key[:8]
-    potential_key = db.query(APIKey).filter(APIKey.prefix == prefix).first()
+    potential_key = await crud_api_key.find_by_prefix(db,prefix=prefix)
 
     if not potential_key or not potential_key.is_active or not verify_key(api_key, potential_key.hashed_key):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or inactive API key")
@@ -124,7 +127,7 @@ def get_chatauth_from_api_key(
 
 async def redirect_if_authenticated(
     request: Request,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     A dependency that checks for a valid authentication cookie.
@@ -147,7 +150,7 @@ async def redirect_if_authenticated(
         return # Token is invalid/expired, let them see the login page.
 
     # Check if the user from the token still exists.
-    user = db.query(User).filter(User.username == username).first()
+    user = await crud_user.get_user_by_username(db,username=username)
 
     # If the user is valid, this is when we redirect.
     if user:

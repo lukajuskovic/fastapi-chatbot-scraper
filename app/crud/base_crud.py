@@ -2,7 +2,8 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
 
@@ -14,57 +15,79 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
+        """
+        CRUD object with default methods to Create, Read, Update, Delete (CRUD).
+        **Parameters**
+        * `model`: A SQLAlchemy model class
+        """
         self.model = model
 
+    # --- READ Method (Single) ---
+    async def get(self, db: AsyncSession, id: Any) -> Optional[ModelType]:
+        """
+        Get a single object by ID.
+        """
+        statement = select(self.model).where(self.model.id == id)
+        result = await db.execute(statement)
+        return result.scalar_one_or_none()
 
-    def get(self, db: Session, id: Any) -> Optional[ModelType]:
-        return db.query(self.model).filter(self.model.id == id).first()
-
-    def get_multi(
-            self, db: Session, *, skip: int = 0, limit: int = 100
+    # --- READ Method (Multiple) ---
+    async def get_multi(
+            self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
-        return db.query(self.model).offset(skip).limit(limit).all()
+        """
+        Get multiple objects with optional pagination.
+        """
+        statement = select(self.model).offset(skip).limit(limit)
+        result = await db.execute(statement)
+        return result.scalars().all()
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        # Convert Pydantic model to a dictionary
+    # --- CREATE Method ---
+    async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+        """
+        Create a new object.
+        """
         obj_in_data = obj_in.model_dump()
-        # Create a new SQLAlchemy model instance from the dictionary
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def update(
+    # --- UPDATE Method ---
+    async def update(
             self,
-            db: Session,
+            db: AsyncSession,
             *,
             db_obj: ModelType,
             obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
-        # Get the existing object's data as a dictionary
+        """
+        Update an existing object.
+        """
         obj_data = jsonable_encoder(db_obj)
-
-        # Get the update data, either from a Pydantic model or a dictionary
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
-            # Use exclude_unset=True to only include fields that were actually provided
             update_data = obj_in.model_dump(exclude_unset=True)
 
-        # Update the fields
         for field in obj_data:
             if field in update_data:
                 setattr(db_obj, field, update_data[field])
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def remove(self, db: Session, *, id: Any) -> ModelType | None:
-        obj = db.query(self.model).get(id)
+    # --- DELETE Method ---
+    async def remove(self, db: AsyncSession, *, id: Any) -> ModelType | None:
+        """
+        Delete an object by ID.
+        """
+        # First, we need to fetch the object asynchronously
+        obj = await self.get(db, id=id)
         if obj:
-            db.delete(obj)
-            db.commit()
+            await db.delete(obj)
+            await db.commit()
         return obj

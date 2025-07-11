@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.chatbot import ChatRequest, ChatResponse
 from app.api.deps import get_db, get_chatauth_from_api_key
@@ -22,9 +22,10 @@ async def dash(
         {"request": request}
     )
 @chatbot_router.post("/chat", response_model=ChatResponse)
-def chat_with_website(
+async def chat_with_website(
         chat_request: ChatRequest,
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_db),
         auth_data: tuple = Depends(get_chatauth_from_api_key)
 ):
-    return chatting(chat_request,db,auth_data)
+    res = await chatting(chat_request,db,auth_data)
+    return res

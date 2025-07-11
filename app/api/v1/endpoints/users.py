@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -24,9 +24,10 @@ user_router = APIRouter()
 # --- User Authentication Endpoints ---
 
 @user_router.post("/signup")
-def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+async def signup(user_data: UserCreate,
+           db: AsyncSession = Depends(get_db)):
     """Handles new user registration."""
-    crud_user.create(db, user_data)
+    await crud_user.create(db, obj_in=user_data)
     return {"message": "User has been created"}
 
 
@@ -40,9 +41,9 @@ async def get_signup_page(request: Request, _=Depends(redirect_if_authenticated)
 async def login(
         response: Response,
         user_data: UserLogin,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
-    logging_in(response, user_data, db)
+    await logging_in(response, user_data, db)
     return
 
 
@@ -62,15 +63,15 @@ def logout(response: Response):
 # --- API Key and Website Management Endpoints ---
 
 @user_router.post("/api-keys", response_model=APIKeyResponse)
-def create_api_key(
+async def create_api_key(
         web_info: WebsiteURLRequest,
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="You must be logged in")
 
-    new_key = make_apikey(WebsiteCreate(url=web_info.url,owner_id=current_user.id), db)
+    new_key = await make_apikey(WebsiteCreate(url=web_info.url,owner_id=current_user.id), db)
     return APIKeyResponse(
         key=new_key,
         message="API key generated successfully. Please store it securely."
@@ -78,21 +79,22 @@ def create_api_key(
 
 
 @user_router.get("/api-keys", response_model=list[APIKeyInfo])
-def get_user_api_keys(
-        current_user: User = Depends(get_current_user)
+async def get_user_api_keys( # 1. Changed to 'async def'
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Fetches all API keys belonging to the current user."""
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+
     return current_user.api_keys
 
 
 @user_router.delete("/api-keys/{key_id}", status_code=204)
-def delete_api_key(key_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def delete_api_key(key_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    removing_apikey(key_id, db, current_user)
+    await removing_apikey(key_id, db, current_user)
     return Response(status_code=204)
 
 

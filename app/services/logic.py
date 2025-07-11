@@ -3,15 +3,13 @@ from fastapi import HTTPException
 
 from PIL import Image
 from fastapi import requests
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
-from app.models.scrapedcontent import ScrapedContent
 from app.models.chat_session import Chat_session
-from app.models.message import Message,MessageSender
+from app.models.message import MessageSender
 from .scraping import get_embedding
 
-# Import and configure the Google Generative AI client
 import google.generativeai as genai
 from app.core.config import get_settings
 from app.crud.crud_chat_session import crud_chat_session
@@ -29,23 +27,24 @@ genai.configure(api_key=settings.GOOGLE_API_KEY)
 llm_model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
 
-def find_or_create_session(db: Session, website_id: int, session_id: str | None) -> Chat_session:
+async def find_or_create_session(db: AsyncSession, website_id: int, session_id: str | None) -> Chat_session:
     if session_id:
-        session = crud_chat_session.get(db, id=session_id)
+        session = await crud_chat_session.get(db, id=session_id)
         if session:
             return session
 
     session_data_in = ChatSessionCreate(website_id=website_id)
-    return crud_chat_session.create(db, obj_in=session_data_in)
+    res = await crud_chat_session.create(db, obj_in=session_data_in)
+    return res
 
 
-def get_chat_history(db: Session, session_id: uuid.UUID) -> str:
+async def get_chat_history(db: AsyncSession, session_id: uuid.UUID) -> str:
     """
     Retrieves the most recent messages from a chat session and formats them
     into a string for use in the prompt.
     """
     # Query the database for messages in the current session, ordered by time
-    messages = crud_message.get_messages_by_session(db,session_id = session_id)
+    messages = await crud_message.get_messages_by_session(db,session_id = session_id)
 
     # Reverse the list to get chronological order and format into a "Sender: Text" string
     history = "\n".join([f"{msg.sender.value}: {msg.text}" for msg in reversed(messages)])
@@ -81,7 +80,7 @@ def generate_search_query(history: str, query: str) -> str:
         return query
 
 
-def find_relevant_context(db: Session, website_id: int, query: str, history: str, top_k: int = 5) -> str:
+async def find_relevant_context(db: AsyncSession, website_id: int, query: str, history: str, top_k: int = 5) -> str:
     """
     Finds the most relevant text chunks from the database using vector similarity search.
     It first refines the user's query based on chat history for better results.
@@ -95,7 +94,7 @@ def find_relevant_context(db: Session, website_id: int, query: str, history: str
         return ""
 
     # 3. Perform a vector similarity search (L2 distance) against the scraped content
-    results= crud_scraped_content.get_relevant_scraped_content(db,website_id = website_id,embedding = query_embedding,top_k = top_k)
+    results= await crud_scraped_content.get_relevant_scraped_content(db,website_id = website_id,embedding = query_embedding,top_k = top_k)
 
     structured_context = []
     for item in results:
@@ -123,31 +122,10 @@ def generate_response(website_url: str, history: str, context: str, query: str) 
     Builds the final prompt with context and history, then calls the LLM
     to generate the chatbot's answer.
     """
-    # Handle the case where no relevant context was found in the database
-    prompt_context=""
-    if not context:
-        prompt_context = "No context was provided. The answer is not available in the website content."
-    else:
-        for item in context:
-            if item['type'] == 'text':
-                prompt_context+=f"Text from {item['source']}:\n{item['content']}\n---"
-            elif item['type'] == 'image':
-                try:
-                    # Fetch the image from its URL
-                    response = requests.get(item['url'], stream=True, timeout=10)
-                    response.raise_for_status()  # Raise an exception for bad status codes
-                    # Open the image using Pillow
-                    image = Image.open(io.BytesIO(response.content))
 
-                    # Add the image and its description to the prompt
-                    prompt_context.append+=f"Image from {item['source']} (Description: '{item['description']}'): {image}"
-                    prompt_context.append+="---\n"
-                except Exception as e:
-                    print(f"Could not load image from {item['url']}: {e}")
-                    prompt_context.append+=f"[Image at {item['url']} could not be loaded]"
 
     # This detailed prompt sets the persona and rules for the LLM
-    prompt = f"""You are a friendly and helpful assistant for the website {website_url}. Your goal is to be both a knowledgeable expert about the site and a natural conversationalist.
+    prompt_parts = [ f"""You are a friendly and helpful assistant for the website {website_url}. Your goal is to be both a knowledgeable expert about the site and a natural conversationalist.
 
     Follow these two rules for your responses:
 
@@ -162,27 +140,48 @@ def generate_response(website_url: str, history: str, context: str, query: str) 
         *   If they are asking questions with topics unrelated to the website, politely tell them that is not your expertise.
 
     --- CONTEXT FROM THE WEBSITE ---
-    {prompt_context}
+    """
+    ]
 
-    --- CONVERSATION HISTORY ---
-    {history}
+    # Handle the case where no relevant context was found in the database
 
-    --- CURRENT QUESTION ---
-    User: {query}
+    if not context:
+        prompt_parts.append("No context was provided. The answer is not available in the website content.")
+    else:
+        for item in context:
+            if item['type'] == 'text':
+                prompt_parts.append(f"Text from {item['source']}:\n{item['content']}\n---")
+            elif item['type'] == 'image':
+                try:
+                    # Fetch the image from its URL
+                    response = requests.get(item['url'], stream=True, timeout=10)
+                    response.raise_for_status()  # Raise an exception for bad status codes
+                    # Open the image using Pillow
+                    image = Image.open(io.BytesIO(response.content))
 
-    Assistant's Response:"""
+                    # Add the image and its description to the prompt
+                    prompt_parts.append(f"Image from {item['source']} (Description: '{item['description']}'):")
+                    prompt_parts.append(image)
+                    prompt_parts.append("---\n")
+                except Exception as e:
+                    print(f"Could not load image from {item['url']}: {e}")
+                    prompt_parts.append(f"[Image at {item['url']} could not be loaded]")
+
+    # Add the final parts of the prompt
+    prompt_parts.append(f"\n--- CONVERSATION HISTORY ---\n{history}")
+    prompt_parts.append(f"\n--- CURRENT QUESTION ---\nUser: {query}\n\nAssistant's Response:")
 
     try:
         # Send the complete prompt to the LLM and return its response text
-        response = llm_model.generate_content(prompt)
+        response = llm_model.generate_content(prompt_parts)
         return response.text
     except Exception as e:
         # Provide a fallback message if the API call fails
         return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again later."
 
 
-def chatting(chat_request: ChatRequest,
-        db: Session,
+async def chatting(chat_request: ChatRequest,
+        db: AsyncSession,
         auth_data: tuple):
     """Main endpoint for chatbot functionality."""
     current_user, website = auth_data
@@ -191,24 +190,24 @@ def chatting(chat_request: ChatRequest,
         raise HTTPException(status_code=404, detail="Website not found or you do not have permission.")
 
     # Find or create a chat session
-    session = find_or_create_session(db, website.id, chat_request.session_id)
+    session = await find_or_create_session(db, website.id, chat_request.session_id)
 
     # Save the user's incoming message to the database
     msg = MessageCreate(chat_session_id=session.id ,sender = MessageSender.USER ,text=chat_request.query)
-    crud_message.create(db, obj_in=msg)
+    await crud_message.create(db, obj_in=msg)
 
     # Get conversation history for the prompt
-    history = get_chat_history(db, session.id)
+    history = await get_chat_history(db, session.id)
 
     # Find relevant context from scraped data using vector search
-    context = find_relevant_context(db, website.id, chat_request.query, history)
+    context = await find_relevant_context(db, website.id, chat_request.query, history)
 
     # Generate a response from the LLM
     answer = generate_response(website.url, history, context, chat_request.query)
 
     # Save the bot's response to the database
     msg_bot = MessageCreate(chat_session_id=session.id ,sender = MessageSender.BOT ,text=answer)
-    crud_message.create(db, obj_in=msg_bot)
+    await crud_message.create(db, obj_in=msg_bot)
 
     # Return the response to the user
     return ChatResponse(answer=answer, session_id=str(session.id))

@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import time
 from sentence_transformers import SentenceTransformer
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 import os
 import csv
@@ -13,10 +14,13 @@ import requests
 
 from app.crud.crud_scrapedcontent import crud_scraped_content
 from app.crud.crud_website import crud_website
-from app.db.session import SessionLocal
-from app.models.website import ScrapingStatus
+from app.db.session import AsyncSessionLocal
+from app.models.scrapedcontent import ScrapedContent
+from app.models.website import ScrapingStatus, Website
 from app.schemas.scrapedcontent import ScrapedContentCreate
 from app.schemas.website import WebsiteUpdate
+
+from app.db.session import SyncSessionLocal
 
 CSV_FILENAME = "scraped_data_log.csv"
 CSV_HEADERS = ['website_id', 'source_url', 'text_content', 'embedding_preview']
@@ -44,9 +48,9 @@ def get_embedding(text: str):
     # The .tolist() converts the numpy array to a standard Python list
     return embedding_model.encode(text.strip()).tolist()
 
-
-def add_chunk_to_db_and_csv(
-        db: Session,
+'''
+async def add_chunk_to_db_and_csv(
+        db: AsyncSession,
         chunks_to_add: list,
         website_id: int,
         source_url: str
@@ -62,7 +66,7 @@ def add_chunk_to_db_and_csv(
     for text_chunk in chunks_to_add:
         embedding = get_embedding(text_chunk)
         if embedding:
-            crud_scraped_content.create(db,obj_in= ScrapedContentCreate(website_id = website_id,source_url = source_url, text_content = text_chunk, embedding=embedding))
+            await crud_scraped_content.create(db,obj_in= ScrapedContentCreate(website_id = website_id,source_url = source_url, text_content = text_chunk, embedding=embedding))
 
     # Batch write to CSV
     #file_exists = os.path.exists(CSV_FILENAME)
@@ -74,6 +78,42 @@ def add_chunk_to_db_and_csv(
     #    for text_chunk in chunks_to_add:
     #        embedding_preview = "omitted"
     #        writer.writerow([website_id, source_url, text_chunk, embedding_preview])
+'''
+
+
+def add_chunk_to_db_and_csv(
+        db: Session,  # The 'db' object is now a synchronous SQLAlchemy Session
+        chunks_to_add: list,
+        website_id: int,
+        source_url: str
+):
+    """
+    Adds a list of text chunks to the database using direct, synchronous
+    SQLAlchemy operations and logs them to a CSV.
+    """
+    if not chunks_to_add:
+        return
+
+    # --- Database Logic ---
+    # This loop now performs synchronous operations
+    for chunk in chunks_to_add:
+        # This handles both text strings and image dictionaries
+        text_content = chunk if isinstance(chunk, str) else chunk.get("text_content")
+
+        if text_content:
+            embedding = get_embedding(text_content)
+            if embedding:
+                # 1. Create an instance of the SQLAlchemy model directly
+                new_content = ScrapedContent(
+                    website_id=website_id,
+                    source_url=source_url,
+                    text_content=text_content,
+                    embedding=embedding
+                )
+                # 2. Add the new object to the session.
+                # The actual commit will happen later in the main scrape_site function.
+                db.add(new_content)
+    db.commit()
 
 def process_page_content(page_html: str, source_url: str) -> list[str]:
     """
@@ -158,12 +198,13 @@ def scrape_site(url: str, website_id: int):
     #######################################
     start_url = url
     base_domain = urlparse(start_url).netloc
-    db= SessionLocal()
-    website = crud_website.get(db, id=website_id)
+    db = SyncSessionLocal()
+    website = db.query(Website).filter(Website.id == website_id).first()
     if not website:
         return
     try:
-        crud_website.update(db, db_obj=website,obj_in=WebsiteUpdate(scraping_status=ScrapingStatus.SCRAPING))
+        website.scraping_status = ScrapingStatus.SCRAPING
+        db.commit()
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -259,8 +300,10 @@ def scrape_site(url: str, website_id: int):
             print(f"Total pages visited: {len(visited_urls)}")
             browser.close()
     finally:
-        website = crud_website.get(db, id=website_id)
-        crud_website.update(db,db_obj=website,obj_in=WebsiteUpdate(scraping_status=ScrapingStatus.COMPLETED))
+        website = db.query(Website).filter(Website.id == website_id).first()
+        if website:
+            website.scraping_status = ScrapingStatus.COMPLETED
+            db.commit()
         db.close()
 
 

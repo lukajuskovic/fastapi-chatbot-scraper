@@ -9,7 +9,8 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
     environment:
-      DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      DB_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      SYNC_DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       SECRET_KEY: ${SECRET_KEY}
     ports:
