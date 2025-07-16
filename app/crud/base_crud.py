@@ -42,13 +42,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(statement)
         return result.scalars().all()
 
+    async def create_model(self, obj_in:CreateSchemaType) -> ModelType:
+        obj_in_data = obj_in.model_dump()
+        db_obj = self.model(**obj_in_data)
+        return db_obj
+
     # --- CREATE Method ---
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         """
         Create a new object.
         """
-        obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
+        db_obj = await self.create_model(obj_in)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)

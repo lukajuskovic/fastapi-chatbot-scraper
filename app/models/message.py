@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, ForeignKey, DateTime, Enum, func, Text
+from sqlalchemy import Column, ForeignKey, DateTime, Enum, func, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base import Base
@@ -21,3 +21,8 @@ class Message(Base):
     time_created = Column(DateTime(timezone=True), server_default=func.now())
 
     chat_session = relationship("Chat_session", back_populates='messages')
+
+    # index for 'time_created' column in descending order.
+    __table_args__ = (
+        Index('messages_time_created_desc',chat_session_id, time_created.desc()),
+    )

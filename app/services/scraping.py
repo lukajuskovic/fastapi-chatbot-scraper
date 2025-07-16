@@ -36,11 +36,6 @@ else:
     print(f"Saving model to '{MODEL_PATH}'...")
     embedding_model.save(MODEL_PATH)
 
-
-
-
-
-
 def get_embedding(text: str):
     """Generates a vector embedding for a given piece of text."""
     if not text or not isinstance(text, str):

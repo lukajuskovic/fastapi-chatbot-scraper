@@ -11,8 +11,8 @@ from app.schemas.user import UserCreate, UserLogin
 from app.schemas.api_key import APIKeyResponse, APIKeyInfo
 from app.schemas.website import WebsiteCreate, WebsiteURLRequest
 from app.api.deps import get_db, get_current_user, redirect_if_authenticated
-from app.services.authentication import logging_in
-from app.services.dashboard import make_apikey, removing_apikey
+from app.services.authentication import AuthenticationService
+from app.services.dashboard import DashboardService
 
 # Initialize Jinja2 templates to render HTML pages
 templates = Jinja2Templates(directory="templates")
@@ -31,24 +31,22 @@ async def signup(user_data: UserCreate,
     return {"message": "User has been created"}
 
 
-@user_router.get("/signup", response_class=HTMLResponse)
-async def get_signup_page(request: Request, _=Depends(redirect_if_authenticated)):
+@user_router.get("/signup", response_class=HTMLResponse, dependencies= [Depends(redirect_if_authenticated)])
+async def get_signup_page(request: Request):
     """Serves the HTML page for user registration."""
     return templates.TemplateResponse("signup.html", {"request": request})
-
 
 @user_router.post("/login", status_code=status.HTTP_204_NO_CONTENT)
 async def login(
         response: Response,
         user_data: UserLogin,
-        db: AsyncSession = Depends(get_db)
+        auth_service: AuthenticationService = Depends()
 ):
-    await logging_in(response, user_data, db)
-    return
+    await auth_service.login_user(response=response, user_data=user_data)
 
 
-@user_router.get("/login", response_class=HTMLResponse)
-async def get_login_page(request: Request, _=Depends(redirect_if_authenticated)):
+@user_router.get("/login", response_class=HTMLResponse, dependencies=[Depends(redirect_if_authenticated)])
+async def get_login_page(request: Request):
     """Serves the HTML page for user login."""
     return templates.TemplateResponse("login.html", {"request": request})
 
@@ -65,21 +63,23 @@ def logout(response: Response):
 @user_router.post("/api-keys", response_model=APIKeyResponse)
 async def create_api_key(
         web_info: WebsiteURLRequest,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        current_user: User = Depends(get_current_user),
+        dashboard_service: DashboardService = Depends()
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="You must be logged in")
 
-    new_key = await make_apikey(WebsiteCreate(url=web_info.url,owner_id=current_user.id), db)
-    return APIKeyResponse(
-        key=new_key,
-        message="API key generated successfully. Please store it securely."
+    key = await dashboard_service.create_website_and_api_key(
+        website_data=WebsiteCreate(url=web_info.url,owner_id=current_user.id)
     )
+    return {
+        "key": key,
+        "message": "API key generated successfully. Scraping has started."
+    }
 
 
 @user_router.get("/api-keys", response_model=list[APIKeyInfo])
-async def get_user_api_keys( # 1. Changed to 'async def'
+async def get_user_api_keys(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -90,13 +90,16 @@ async def get_user_api_keys( # 1. Changed to 'async def'
 
 
 @user_router.delete("/api-keys/{key_id}", status_code=204)
-async def delete_api_key(key_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def delete_api_key(
+        key_id: uuid.UUID,
+        current_user: User = Depends(get_current_user),
+        dashboard_service: DashboardService = Depends()
+):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    await dashboard_service.delete_api_key(key_id=key_id, current_user=current_user)
 
-    await removing_apikey(key_id, db, current_user)
     return Response(status_code=204)
-
 
 # --- Dashboard and SSE Endpoints ---
 

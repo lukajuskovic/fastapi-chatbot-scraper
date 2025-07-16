@@ -27,10 +27,10 @@ class CRUDUser(CRUDBase[User, UserCreate, BaseModel]):
         result = await db.execute(statement)
         return result.scalar_one_or_none()
 
-    async def create(self, db: AsyncSession, obj_in: UserCreate) -> User:
+    async def create_model(self, obj_in: UserCreate) -> User:
         """
         Creates a new user, hashing the password before saving.
-        This overrides the base create method to include password hashing.
+        This overrides the base create model method to include password hashing.
         """
         # Hash the password from the input schema
         hashed_pass = hashing_password(obj_in.password)
@@ -41,11 +41,6 @@ class CRUDUser(CRUDBase[User, UserCreate, BaseModel]):
             email=obj_in.email,
             hashed_password=hashed_pass
         )
-
-        # Add the new user to the session and commit the transaction
-        db.add(db_user)
-        await db.commit()
-        await db.refresh(db_user)
 
         return db_user
 

@@ -7,13 +7,13 @@ from app.api.deps import get_db, get_chatauth_from_api_key
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.services.logic import chatting
+from app.services.chat import ChatService
 
-chatbot_router = APIRouter()
+chatbot_router = APIRouter(prefix="/chat")
 templates = Jinja2Templates(directory="templates")
 
 
-@chatbot_router.get("/chat", response_class=HTMLResponse)
+@chatbot_router.get("/", response_class=HTMLResponse)
 async def dash(
     request: Request,
 ):
@@ -21,11 +21,13 @@ async def dash(
         "chatbot.html",
         {"request": request}
     )
-@chatbot_router.post("/chat", response_model=ChatResponse)
+@chatbot_router.post("/", response_model=ChatResponse)
 async def chat_with_website(
         chat_request: ChatRequest,
-        db: AsyncSession = Depends(get_db),
-        auth_data: tuple = Depends(get_chatauth_from_api_key)
+        auth_data: tuple = Depends(get_chatauth_from_api_key),
+        chat_service: ChatService = Depends()
 ):
-    res = await chatting(chat_request,db,auth_data)
-    return res
+    return await chat_service.process_chat_request(
+        chat_request=chat_request,
+        auth_data=auth_data
+    )

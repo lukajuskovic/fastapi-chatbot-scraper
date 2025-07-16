@@ -92,7 +92,12 @@ class CRUDAPIKey(CRUDBase[APIKey, APIKeyCreate, BaseModel]):
             .where(self.model.id == id)
         )
         result = await db.execute(statement)
-        return result.scalar_one_or_none()
+        obj_to_delete = result.scalar_one_or_none()
+        if obj_to_delete:
+            await db.delete(obj_to_delete)
+            await db.commit()
+            return obj_to_delete
+        return None
 
     async def get_key_with_full_details(self, db: AsyncSession, *, key_id: uuid.UUID) -> APIKey | None:
         """
